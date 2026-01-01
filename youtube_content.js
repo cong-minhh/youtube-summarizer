@@ -5,14 +5,13 @@ const CHATGPT_PROMPT_TEMPLATE = `Summarize the content into 5–10 concise bulle
 
 If the input is a transcript, include accurate timestamps.
 
-Present the output in two sections:
+Format the output as follows for each point:
+(Time) English summary point
+> *Vietnamese translation (Clear, natural Vietnamese, not word-for-word).*
 
-### English version
-
-### Vietnamese version
-(Clear, natural Vietnamese, not word-for-word).
-- Preserve key terminology and avoid filler.
-- *Write the entire Vietnamese translation in italics.*
+Example:
+(0:00-0:30) AJ, a 38-year-old man, presents to the ER...
+> *AJ, 38 tuổi, nhập khoa cấp cứu...*
 
 Title: "{{Title}}"
 
@@ -22,27 +21,56 @@ Transcript: "{{Transcript}}"`;
 
 // --- Components ---
 
-function createSummarizeButton() {
+function createSummarizerUI() {
+    const container = document.createElement('div');
+    container.className = 'yt-summarizer-container';
+
+    // 1. Create Checkbox for "Temporary Chat"
+    const label = document.createElement('label');
+    label.className = 'yt-summarizer-label';
+    label.title = "Use temporary chat (history won't be saved)";
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'yt-summarizer-checkbox';
+    
+    // Load saved state
+    const savedState = localStorage.getItem('yt_summarizer_temp_chat');
+    checkbox.checked = savedState === 'true';
+
+    // Save state on change
+    checkbox.onchange = (e) => {
+        localStorage.setItem('yt_summarizer_temp_chat', e.target.checked);
+    };
+
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode('Temp Chat'));
+
+    // 2. Create Summarize Button
     const btn = document.createElement('button');
     btn.className = 'yt-summarizer-btn';
     btn.innerText = 'Summarize';
     btn.onclick = handleSummarizeClick;
-    return btn;
+
+    container.appendChild(label);
+    container.appendChild(btn);
+
+    return container;
 }
 
 function injectButton() {
     // Check if already injected
-    if (document.querySelector('.yt-summarizer-btn')) return;
+    if (document.querySelector('.yt-summarizer-container')) return;
 
     // Target location: usually near the subscribe button or the owner container
     // This selector might need adjustment based on YouTube's layout updates
     const target = document.querySelector('#owner #subscribe-button') || document.querySelector('#owner');
     
     if (target) {
-        const btn = createSummarizeButton();
+        const ui = createSummarizerUI();
         // Insert before the subscribe button container, or append if just owner
-        target.parentNode.insertBefore(btn, target);
-        console.log('Summarize button injected');
+        target.parentNode.insertBefore(ui, target);
+        console.log('Summarize UI injected');
     } else {
         // Retry if not found (lazy loading)
         // console.log('Target for summarize button not found yet...');
@@ -67,10 +95,14 @@ async function handleSummarizeClick() {
             .replace('{{URL}}', videoUrl)
             .replace('{{Transcript}}', transcript);
 
+        // Check if temporary chat is requested
+        const useTempChat = document.querySelector('.yt-summarizer-checkbox')?.checked || false;
+
         // Send to background
         chrome.runtime.sendMessage({
             action: 'open_chatgpt',
-            prompt: prompt
+            prompt: prompt,
+            temporaryChat: useTempChat
         });
 
     } catch (error) {

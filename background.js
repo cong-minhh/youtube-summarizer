@@ -7,7 +7,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       console.log('Prompt saved to storage.');
       
       // 2. Open ChatGPT
-      chrome.tabs.create({ url: 'https://chatgpt.com' });
+      // Check if temporary chat was requested
+      const baseUrl = 'https://chatgpt.com';
+      const targetUrl = request.temporaryChat 
+        ? `${baseUrl}/?temporary-chat=true` 
+        : baseUrl;
+
+      chrome.tabs.create({ url: targetUrl });
     });
   }
 });

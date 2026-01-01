@@ -35,6 +35,41 @@ html:not([dark]) .yt-summarizer-btn {
     border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-html:not([dark]) .yt-summarizer-btn:hover {
-    background-color: rgba(0, 0, 0, 0.1);
+
+/* Container for the button and checkbox */
+.yt-summarizer-container {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+}
+
+/* Label for the checkbox */
+.yt-summarizer-label {
+    display: inline-flex;
+    align-items: center;
+    color: var(--yt-spec-text-secondary, #aaa);
+    font-size: 12px;
+    margin-right: 8px;
+    cursor: pointer;
+    font-family: "Roboto", "Arial", sans-serif;
+    user-select: none;
+}
+
+.yt-summarizer-label:hover {
+    color: var(--yt-spec-text-primary, #fff);
+}
+
+/* Checkbox style */
+.yt-summarizer-checkbox {
+    margin-right: 4px;
+    cursor: pointer;
+}
+
+/* Light mode overrides for label */
+html:not([dark]) .yt-summarizer-label {
+    color: var(--yt-spec-text-secondary, #606060);
+}
+
+html:not([dark]) .yt-summarizer-label:hover {
+    color: var(--yt-spec-text-primary, #0f0f0f);
 }
