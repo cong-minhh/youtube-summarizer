@@ -1,30 +1,40 @@
 // youtube_content.js
 
 // --- Configuration ---
-const CHATGPT_PROMPT_TEMPLATE = `Summarize the content into 5–10 concise bullet points capturing the main ideas and reasoning.
+const CHATGPT_PROMPT_TEMPLATE = `
+You are an expert content strategist and translator. Your goal is to synthesize the provided YouTube transcript into a high-value, professional summary that is both insightful and easy to digest.
 
-If the input is a transcript, include accurate timestamps.
+### Executive Summary
+Provide a compelling 2-3 sentence overview of the video's core thesis. What is the main argument, and why does it matter?
 
-Format the output as follows for each point:
-(Start-End) English summary point
-> *Vietnamese translation (Clear, natural Vietnamese, not word-for-word).*
+### Key Insights & Takeaways
+Extract 5-10 distinct, actionable points. Focus on unique perspectives, specific data, or step-by-step instructions rather than generic fluff.
+
+**Format for each point:**
+(Start-End) **[Topic/Heading]**: [Deep-dive summary of the point in English]
+> *[Vietnamese translation: Natural, professional, and context-aware]*
 [Link to video at start time]
 
-Example:
-(0:04-0:40) Bubble sort is often dismissed as useless, but it is extremely easy to understand...
-> *Bubble sort thường bị coi là vô dụng, nhưng lại cực kỳ dễ hiểu...*
+**Example:**
+(0:04-0:40) **The Value of Simplicity**: Bubble sort is often dismissed for poor performance, yet its simplicity makes it the perfect teaching tool.
+> *Giá trị của sự đơn giản: Bubble sort thường bị bỏ qua vì hiệu suất kém, nhưng sự đơn giản lại khiến nó trở thành công cụ giảng dạy tuyệt vời.*
 https://youtu.be/qGH8gKdpZMQ?t=4
 
-Instructions for Links:
-- Use the Video URL provided below.
-- Convert the start time (e.g., 0:04) to seconds (e.g., 4).
-- Append the timestamp parameter (e.g. &t=4s or ?t=4).
+### Notable Quotes / "Aha!" Moments
+Briefly list 1-2 standout quotes or surprising facts from the video.
 
-Title: "{{Title}}"
+---
+**Technical Instructions:**
+- **Links**: Use {{URL}} as base. Convert timestamp (e.g., 1:05) to seconds (e.g. 65) -> {{URL}}?t=65
+- **Tone**: Professional, objective, yet engaging.
 
-URL: "{{URL}}"
+**Video Metadata:**
+- **Title**: "{{Title}}"
+- **URL**: "{{URL}}"
 
-Transcript: "{{Transcript}}"`;
+**Transcript:**
+"{{Transcript}}"
+`;
 
 // --- Components ---
 
