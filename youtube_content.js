@@ -32,89 +32,136 @@ Briefly list 1-2 standout quotes or surprising facts from the video.
 
 // --- Components ---
 
+const LANGUAGES = ['English', 'Vietnamese', 'Spanish', 'French', 'German', 'Japanese', 'Korean'];
+
 function createSummarizerUI() {
     const container = document.createElement('div');
-    container.className = 'yt-summarizer-container';
+    container.className = 'yt-summarizer-overlay';
 
-    // 1. Create main wrapper for better isolation
-    const wrapper = document.createElement('div');
-    wrapper.className = 'yt-summarizer-wrapper';
-
-    // 2. Button Group
-    const btnGroup = document.createElement('div');
-    btnGroup.className = 'yt-summarizer-group';
-
-    // Summarize Button
-    const btn = document.createElement('button');
-    btn.className = 'yt-summarizer-btn';
-    btn.innerHTML = `
-        <svg viewBox="0 0 24 24" height="20" width="20" fill="currentColor" style="margin-right: 6px;">
+    // --- Bubble ---
+    const bubble = document.createElement('div');
+    bubble.className = 'yt-summarizer-bubble';
+    bubble.title = 'Open Summarizer Menu';
+    bubble.innerHTML = `
+        <svg viewBox="0 0 24 24" height="24" width="24" fill="currentColor">
             <path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z"></path>
         </svg>
-        Summarize
     `;
-    btn.title = "Summarize with ChatGPT";
-    btn.onclick = handleSummarizeClick;
-
-    // Settings Hint (small icon)
-    const settingsBtn = document.createElement('button');
-    settingsBtn.className = 'yt-summarizer-icon-btn';
-    settingsBtn.innerHTML = `
-        <svg viewBox="0 0 24 24" height="18" width="18" fill="currentColor">
-            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.09.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"></path>
-        </svg>
-    `;
-    settingsBtn.title = "Configure in Extension Settings";
-    settingsBtn.onclick = () => {
-        alert("Please click the extension icon in your browser toolbar to configure settings.");
+    bubble.onclick = (e) => {
+        e.stopPropagation();
+        toggleMenu();
     };
 
-    btnGroup.appendChild(btn);
-    btnGroup.appendChild(settingsBtn);
-    container.appendChild(btnGroup);
+    // --- Menu ---
+    const menu = document.createElement('div');
+    menu.className = 'yt-summarizer-menu';
+    // Prevent clicks inside menu from closing it
+    menu.onclick = (e) => e.stopPropagation();
 
-    // Temp chat toggle (smaller)
-    const label = document.createElement('label');
-    label.className = 'yt-summarizer-toggle';
-    label.title = "Use temporary chat";
+    // 1. Language Selector
+    const langGroup = document.createElement('div');
+    langGroup.className = 'yt-menu-group';
+    const langLabel = document.createElement('label');
+    langLabel.innerText = 'Target Language';
+    const langSelect = document.createElement('select');
+    langSelect.id = 'yt-summary-language';
     
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    const savedState = localStorage.getItem('yt_summarizer_temp_chat');
-    checkbox.checked = savedState === 'true';
-    checkbox.onchange = (e) => localStorage.setItem('yt_summarizer_temp_chat', e.target.checked);
+    LANGUAGES.forEach(lang => {
+        const option = document.createElement('option');
+        option.value = lang;
+        option.innerText = lang;
+        langSelect.appendChild(option);
+    });
 
-    label.appendChild(checkbox);
-    label.appendChild(document.createTextNode('Temp'));
+    // Load saved language preference for the overlay specifically, or fall back to sync storage if we could access it synchronously (we can't easily, so we might need to init it async or just rely on the last selected). 
+    // For simplicity, let's store a local override.
+    const savedLang = localStorage.getItem('yt_summary_target_lang') || 'Vietnamese';
+    langSelect.value = savedLang;
+    langSelect.onchange = (e) => localStorage.setItem('yt_summary_target_lang', e.target.value);
 
-    container.appendChild(label);
+    langGroup.appendChild(langLabel);
+    langGroup.appendChild(langSelect);
+
+    // 2. Temp Chat Toggle
+    const toggleGroup = document.createElement('div');
+    toggleGroup.className = 'yt-menu-group-row';
+    
+    const toggleLabel = document.createElement('label');
+    toggleLabel.className = 'yt-summarizer-toggle';
+    toggleLabel.title = "Use temporary chat";
+    const toggleInput = document.createElement('input');
+    toggleInput.type = 'checkbox';
+    const savedTempState = localStorage.getItem('yt_summarizer_temp_chat');
+    toggleInput.checked = savedTempState === 'true';
+    toggleInput.onchange = (e) => localStorage.setItem('yt_summarizer_temp_chat', e.target.checked);
+    
+    toggleLabel.appendChild(toggleInput);
+    toggleLabel.appendChild(document.createTextNode('Temporary Chat'));
+    toggleGroup.appendChild(toggleLabel);
+
+    // 3. Summarize Button
+    const summarizeBtn = document.createElement('button');
+    summarizeBtn.className = 'yt-menu-btn primary';
+    summarizeBtn.innerText = 'Summarize Video';
+    summarizeBtn.onclick = () => {
+        handleSummarizeClick();
+        // toggleMenu(); // Optional: close menu after clicking? Maybe keep open to show loading?
+    };
+
+    // 4. Settings Link
+    const settingsBtn = document.createElement('button');
+    settingsBtn.className = 'yt-menu-btn secondary';
+    settingsBtn.innerText = 'Extension Settings';
+    settingsBtn.onclick = () => {
+        alert("Please click the extension icon in your browser toolbar for full settings.");
+    };
+
+    menu.appendChild(langGroup);
+    menu.appendChild(toggleGroup);
+    menu.appendChild(document.createElement('hr'));
+    menu.appendChild(summarizeBtn);
+    menu.appendChild(settingsBtn);
+
+    container.appendChild(bubble);
+    container.appendChild(menu);
+
+    // Global click listener to close menu
+    document.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            menu.classList.remove('visible');
+        }
+    });
 
     return container;
 }
 
+function toggleMenu() {
+    const menu = document.querySelector('.yt-summarizer-menu');
+    if (menu) {
+        menu.classList.toggle('visible');
+    }
+}
+
 function injectButton() {
     // Check if already injected
-    if (document.querySelector('.yt-summarizer-container')) return;
+    if (document.querySelector('.yt-summarizer-overlay')) return;
 
-    // Target location: usually near the subscribe button or the owner container
-    // This selector might need adjustment based on YouTube's layout updates
-    const target = document.querySelector('#owner #subscribe-button') || document.querySelector('#owner');
+    // Target location: Video Player
+    const target = document.querySelector('.html5-video-player') || document.querySelector('#movie_player');
     
     if (target) {
         const ui = createSummarizerUI();
-        // Insert before the subscribe button container, or append if just owner
-        target.parentNode.insertBefore(ui, target);
-        console.log('Summarize UI injected');
-    } else {
-        // Retry if not found (lazy loading)
-        // console.log('Target for summarize button not found yet...');
+        target.appendChild(ui);
+        console.log('Summarize Overlay injected');
     }
 }
 
 // --- Logic ---
 
 async function handleSummarizeClick() {
-    const btn = document.querySelector('.yt-summarizer-btn');
+    const btn = document.querySelector('.yt-menu-btn.primary');
+    if (!btn) return; // Safety check
+    
     const originalText = btn.innerText;
     btn.innerText = 'Loading...';
     btn.disabled = true;
@@ -124,18 +171,16 @@ async function handleSummarizeClick() {
         const videoTitle = document.title.replace(' - YouTube', '');
         const videoUrl = window.location.href;
 
-        // Fetch settings
-        const settings = await chrome.storage.sync.get(['promptTemplate', 'language']);
+        // Fetch settings from sync storage (template)
+        const settings = await chrome.storage.sync.get(['promptTemplate']);
         let template = settings.promptTemplate || DEFAULT_PROMPT_TEMPLATE;
-        let language = settings.language || 'Vietnamese'; // Default to Vietnamese as per original request history or English
-
-        // 1. naive replacement of the generic placeholder if it exists
-        // 2. forceful replacement of {{Language}} if we add it
-        // 3. standard metadata replacements
         
+        // Get language from our local overlay selection
+        const language = document.getElementById('yt-summary-language')?.value || 'Vietnamese';
+
         const prompt = template
-            .replace('Target Language Translation', `${language} Translation`) // Fix for the specific line in default template
-            .replace('{{Language}}', language) // Future proofing
+            .replace('Target Language Translation', `${language} Translation`) 
+            .replace('{{Language}}', language)
             .replace('{{Title}}', videoTitle)
             .replace('{{URL}}', videoUrl)
             .replace('{{Transcript}}', transcript);

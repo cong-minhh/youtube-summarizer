@@ -4,48 +4,69 @@
   <meta charset="UTF-8">
   <title>YouTube Summarizer Settings</title>
   <link rel="stylesheet" href="popup.css">
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="header">
-    <h1>Settings</h1>
-  </div>
-  
-  <div class="container">
-    <div class="form-group">
-      <label for="language">Target Language</label>
-      <select id="language">
-        <option value="English">English</option>
-        <option value="Vietnamese">Vietnamese</option>
-        <option value="Spanish">Spanish</option>
-        <option value="French">French</option>
-        <option value="German">German</option>
-        <option value="Japanese">Japanese</option>
-        <option value="Korean">Korean</option>
-      </select>
-    </div>
+  <div class="main-wrapper">
+    <div class="glass-container">
+      <div class="header">
+        <div class="logo-area">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21.5 12C21.5 17.2467 17.2467 21.5 12 21.5C6.75329 21.5 2.5 17.2467 2.5 12C2.5 6.75329 6.75329 2.5 12 2.5C17.2467 2.5 21.5 6.75329 21.5 12Z" stroke="white" stroke-width="1.5"/>
+            <path d="M10 8L16 12L10 16V8Z" fill="white"/>
+          </svg>
+          <h1>YT Summarizer</h1>
+        </div>
+        <p class="subtitle">AI-Powered Video Insights</p>
+      </div>
+      
+      <div class="content">
+        <div class="form-group">
+          <label for="language">Target Language</label>
+          <div class="select-wrapper">
+            <select id="language">
+              <option value="English">English</option>
+              <option value="Vietnamese">Vietnamese</option>
+              <option value="Spanish">Spanish</option>
+              <option value="French">French</option>
+              <option value="German">German</option>
+              <option value="Japanese">Japanese</option>
+              <option value="Korean">Korean</option>
+            </select>
+            <div class="select-arrow"></div>
+          </div>
+        </div>
 
-    <div class="form-group">
-      <label for="summaryStyle">Summary Style</label>
-      <select id="summaryStyle">
-        <option value="executive">Executive (Concise)</option>
-        <option value="detailed">Detailed (Deep Dive)</option>
-        <option value="bullets">Bullet Points Only</option>
-      </select>
-    </div>
+        <div class="form-group">
+          <label for="summaryStyle">Summary Style</label>
+          <div class="select-wrapper">
+            <select id="summaryStyle">
+              <option value="executive">Executive (Concise)</option>
+              <option value="detailed">Detailed (Deep Dive)</option>
+              <option value="bullets">Bullet Points Only</option>
+            </select>
+            <div class="select-arrow"></div>
+          </div>
+        </div>
 
-    <div class="form-group">
-      <label for="promptTemplate">Custom Prompt Template</label>
-      <textarea id="promptTemplate" rows="6" placeholder="Variables: {{Title}}, {{URL}}, {{Transcript}}"></textarea>
-      <div class="help-text">Use {{Title}}, {{URL}}, {{Transcript}} as placeholders.</div>
-      <button id="resetPrompt" class="secondary-btn">Reset to Default</button>
+        <div class="form-group">
+          <label for="promptTemplate">
+            Custom Prompt
+            <span class="info-icon" title="Use {{Title}}, {{URL}}, {{Transcript}} as variables">?</span>
+          </label>
+          <textarea id="promptTemplate" rows="5" placeholder="Customize your prompt here..."></textarea>
+          <button id="resetPrompt" class="link-btn">Reset to Default</button>
+        </div>
+        
+        <div class="actions">
+          <button id="saveBtn" class="primary-btn">
+            <span>Save Settings</span>
+          </button>
+        </div>
+        
+        <div id="status" class="status-msg"></div>
+      </div>
     </div>
-    
-    <div class="actions">
-      <button id="saveBtn" class="primary-btn">Save Settings</button>
-    </div>
-    
-    <div id="status" class="status-msg"></div>
   </div>
 
   <script src="popup.js"></script>
