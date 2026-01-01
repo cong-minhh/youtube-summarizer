@@ -6,12 +6,19 @@ const CHATGPT_PROMPT_TEMPLATE = `Summarize the content into 5–10 concise bulle
 If the input is a transcript, include accurate timestamps.
 
 Format the output as follows for each point:
-(Time) English summary point
+(Start-End) English summary point
 > *Vietnamese translation (Clear, natural Vietnamese, not word-for-word).*
+[Link to video at start time]
 
 Example:
-(0:00-0:30) AJ, a 38-year-old man, presents to the ER...
-> *AJ, 38 tuổi, nhập khoa cấp cứu...*
+(0:04-0:40) Bubble sort is often dismissed as useless, but it is extremely easy to understand...
+> *Bubble sort thường bị coi là vô dụng, nhưng lại cực kỳ dễ hiểu...*
+https://youtu.be/qGH8gKdpZMQ?t=4
+
+Instructions for Links:
+- Use the Video URL provided below.
+- Convert the start time (e.g., 0:04) to seconds (e.g., 4).
+- Append the timestamp parameter (e.g. &t=4s or ?t=4).
 
 Title: "{{Title}}"
 
@@ -115,165 +122,16 @@ async function handleSummarizeClick() {
 }
 
 async function fetchTranscript() {
-    // Strategy 1: API Fetch (Primary)
+    // Strategy: DOM Scrape (Sole Strategy)
+    // The previous API strategies (injected script, page source regex) proved unreliable due to
+    // empty responses and CSP issues. The most robust method is to automate the UI interaction.
     try {
-        const transcript = await fetchTranscriptViaApi();
+        const transcript = await scrapeTranscriptFromDom();
         return transcript;
-    } catch (apiError) {
-        console.warn('API transcript fetch failed, trying DOM fallback:', apiError);
-    }
-
-    // Strategy 2: DOM Scrape (Fallback)
-    try {
-        return scrapeTranscriptFromDom();
     } catch (domError) {
-        throw new Error('Could not fetch transcript. Please open the "Show transcript" panel manually and try again.');
+        console.error('DOM scrape failed:', domError);
+        throw new Error('Could not fetch transcript. Please ensure the "Show transcript" panel is available for this video.');
     }
-}
-
-async function fetchTranscriptViaApi() {
-    const videoId = new URLSearchParams(window.location.search).get('v');
-    if (!videoId) throw new Error('Could not find video ID');
-
-    let transcriptText;
-
-    // 1. Primary Strategy: Injected Script (Main World Fetch)
-    try {
-        transcriptText = await fetchTranscriptFromGlobal();
-    } catch (e) {
-        console.warn('[YT-Summarizer] Injection strategy failed:', e);
-    }
-
-    // 2. Fallback Strategy: Legacy Page Source Regex
-    if (!transcriptText) {
-        console.warn('[YT-Summarizer] Falling back to legacy page source method...');
-        try {
-            transcriptText = await fetchTranscriptLegacyFallback();
-        } catch (legacyError) {
-            console.error('[YT-Summarizer] Legacy fallback failed:', legacyError);
-            throw new Error('All transcript fetch strategies failed.');
-        }
-    }
-
-    if (!transcriptText || transcriptText.trim().length === 0) {
-        throw new Error('Empty transcript response.');
-    }
-
-    return parseTranscript(transcriptText);
-}
-
-async function fetchTranscriptLegacyFallback() {
-    const response = await fetch(window.location.href);
-    const html = await response.text();
-    const match = html.match(/"captionTracks":\s*(\[.*?\])/);
-    
-    if (!match) throw new Error('No captions found in page source.');
-    const captionTracks = JSON.parse(match[1]);
-
-    if (!captionTracks || !captionTracks.length) throw new Error('No caption tracks available.');
-
-    const track = captionTracks.find(t => t.languageCode === 'en' && !t.kind) || 
-                  captionTracks.find(t => t.languageCode === 'en') || 
-                  captionTracks[0];
-                  
-    const trackUrl = track.baseUrl;
-    
-    let res = await fetch(trackUrl);
-    let text = await res.text();
-    
-    if (!text || text.trim().length === 0) {
-         res = await fetch(trackUrl + '&fmt=json3');
-         text = await res.text();
-    }
-    return text;
-}
-
-function fetchTranscriptFromGlobal() {
-    return new Promise((resolve, reject) => {
-        const scriptId = 'yt-summarizer-temp-script';
-        if (document.getElementById(scriptId)) document.getElementById(scriptId).remove();
-
-        const script = document.createElement('script');
-        script.id = scriptId;
-        script.src = chrome.runtime.getURL('injected_script.js');
-        
-        const listener = (event) => {
-            if (event.source !== window) return;
-            
-            if (event.data.type === 'YT_SUMMARIZER_TRANSCRIPT') {
-                cleanup();
-                resolve(event.data.text);
-            } else if (event.data.type === 'YT_SUMMARIZER_ERROR') {
-                cleanup();
-                reject(new Error(event.data.error || 'Unknown injection error'));
-            }
-        };
-
-        const cleanup = () => {
-            window.removeEventListener('message', listener);
-            if (document.getElementById(scriptId)) document.getElementById(scriptId).remove();
-        };
-
-        window.addEventListener('message', listener);
-        (document.head || document.documentElement).appendChild(script);
-
-        // Timeout fallback
-        setTimeout(() => {
-            cleanup();
-            reject(new Error('Timeout waiting for injected script'));
-        }, 5000); // Increased timeout for fetch
-    });
-}
-
-function parseTranscript(transcriptText) {
-    if (transcriptText.trim().startsWith('{')) {
-        return parseTranscriptJson(transcriptText);
-    } else if (transcriptText.trim().startsWith('<')) {
-        return parseTranscriptXmlRegex(transcriptText);
-    } else {
-        throw new Error('Unknown transcript format.');
-    }
-}
-
-function parseTranscriptJson(jsonString) {
-    try {
-        const json = JSON.parse(jsonString);
-        const events = json.events;
-        if (!events) return '';
-
-        let result = '';
-        for (const event of events) {
-            if (event.segs) {
-                const text = event.segs.map(s => s.utf8).join('');
-                const start = event.tStartMs / 1000;
-                result += `(${formatTime(start)}) ${text} `;
-            }
-        }
-        return result.trim();
-    } catch (e) {
-        throw new Error('Failed to parse JSON transcript: ' + e.message);
-    }
-}
-
-function parseTranscriptXmlRegex(xml) {
-    // Simple regex parser to avoid Trusted Types issues
-    const regex = /<text start="([\d.]+)"[^>]*>([^<]*)<\/text>/g;
-    let match;
-    let result = "";
-    
-    while ((match = regex.exec(xml)) !== null) {
-        const start = parseFloat(match[1]);
-        const text = match[2]
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/&quot;/g, '"')
-            .replace(/&#39;/g, "'");
-            
-        result += `(${formatTime(start)}) ${text} `;
-    }
-    
-    return result.trim();
 }
 
 async function scrapeTranscriptFromDom() {

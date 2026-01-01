@@ -27,12 +27,6 @@
       "js": ["chatgpt_content.js"]
     }
   ],
-  "web_accessible_resources": [
-    {
-      "resources": ["injected_script.js"],
-      "matches": ["*://*.youtube.com/*"]
-    }
-  ],
   "action": {
     "default_title": "YouTube Summarizer"
   }
