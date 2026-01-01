@@ -135,41 +135,97 @@ async function fetchTranscriptViaApi() {
     const videoId = new URLSearchParams(window.location.search).get('v');
     if (!videoId) throw new Error('Could not find video ID');
 
-    // 1. Get Caption Tracks from Page Source
+    let transcriptText;
+
+    // 1. Primary Strategy: Injected Script (Main World Fetch)
+    try {
+        transcriptText = await fetchTranscriptFromGlobal();
+    } catch (e) {
+        console.warn('[YT-Summarizer] Injection strategy failed:', e);
+    }
+
+    // 2. Fallback Strategy: Legacy Page Source Regex
+    if (!transcriptText) {
+        console.warn('[YT-Summarizer] Falling back to legacy page source method...');
+        try {
+            transcriptText = await fetchTranscriptLegacyFallback();
+        } catch (legacyError) {
+            console.error('[YT-Summarizer] Legacy fallback failed:', legacyError);
+            throw new Error('All transcript fetch strategies failed.');
+        }
+    }
+
+    if (!transcriptText || transcriptText.trim().length === 0) {
+        throw new Error('Empty transcript response.');
+    }
+
+    return parseTranscript(transcriptText);
+}
+
+async function fetchTranscriptLegacyFallback() {
     const response = await fetch(window.location.href);
     const html = await response.text();
-
     const match = html.match(/"captionTracks":\s*(\[.*?\])/);
-    if (!match) {
-        throw new Error('No captions found in page source.');
-    }
-
-    const captionTracks = JSON.parse(match[1]);
-    if (!captionTracks.length) {
-        throw new Error('No caption tracks available.');
-    }
-
-    // Prefer English
-    const track = captionTracks.find(t => t.languageCode === 'en') || captionTracks[0];
-    const trackUrl = track.baseUrl;
-
-    // 2. Fetch Transcript Content
-    // Try default (likely XML)
-    let transcriptResponse = await fetch(trackUrl);
-    let transcriptText = await transcriptResponse.text();
-
-    if (!transcriptText || transcriptText.trim().length === 0) {
-         // Retry with expected JSON format if default fails/returns empty
-         const jsonUrl = trackUrl + '&fmt=json3';
-         transcriptResponse = await fetch(jsonUrl);
-         transcriptText = await transcriptResponse.text();
-    }
     
-    if (!transcriptText || transcriptText.trim().length === 0) {
-        throw new Error('Empty transcript response from API.');
-    }
+    if (!match) throw new Error('No captions found in page source.');
+    const captionTracks = JSON.parse(match[1]);
 
-    // 3. Parse based on format
+    if (!captionTracks || !captionTracks.length) throw new Error('No caption tracks available.');
+
+    const track = captionTracks.find(t => t.languageCode === 'en' && !t.kind) || 
+                  captionTracks.find(t => t.languageCode === 'en') || 
+                  captionTracks[0];
+                  
+    const trackUrl = track.baseUrl;
+    
+    let res = await fetch(trackUrl);
+    let text = await res.text();
+    
+    if (!text || text.trim().length === 0) {
+         res = await fetch(trackUrl + '&fmt=json3');
+         text = await res.text();
+    }
+    return text;
+}
+
+function fetchTranscriptFromGlobal() {
+    return new Promise((resolve, reject) => {
+        const scriptId = 'yt-summarizer-temp-script';
+        if (document.getElementById(scriptId)) document.getElementById(scriptId).remove();
+
+        const script = document.createElement('script');
+        script.id = scriptId;
+        script.src = chrome.runtime.getURL('injected_script.js');
+        
+        const listener = (event) => {
+            if (event.source !== window) return;
+            
+            if (event.data.type === 'YT_SUMMARIZER_TRANSCRIPT') {
+                cleanup();
+                resolve(event.data.text);
+            } else if (event.data.type === 'YT_SUMMARIZER_ERROR') {
+                cleanup();
+                reject(new Error(event.data.error || 'Unknown injection error'));
+            }
+        };
+
+        const cleanup = () => {
+            window.removeEventListener('message', listener);
+            if (document.getElementById(scriptId)) document.getElementById(scriptId).remove();
+        };
+
+        window.addEventListener('message', listener);
+        (document.head || document.documentElement).appendChild(script);
+
+        // Timeout fallback
+        setTimeout(() => {
+            cleanup();
+            reject(new Error('Timeout waiting for injected script'));
+        }, 5000); // Increased timeout for fetch
+    });
+}
+
+function parseTranscript(transcriptText) {
     if (transcriptText.trim().startsWith('{')) {
         return parseTranscriptJson(transcriptText);
     } else if (transcriptText.trim().startsWith('<')) {
@@ -220,32 +276,60 @@ function parseTranscriptXmlRegex(xml) {
     return result.trim();
 }
 
-function scrapeTranscriptFromDom() {
-    const container = document.querySelector('ytd-transcript-segment-list-renderer');
+async function scrapeTranscriptFromDom() {
+    // 1. Check if already open
+    let container = document.querySelector('ytd-transcript-segment-list-renderer');
+    
+    // 2. If not open, try to open it
     if (!container) {
-        // Try to find and click the button if not open? 
-        // For now, just throwing to prompt user action is safer than auto-clicking which might fail.
-        throw new Error('Transcript panel not open.');
+        console.log('[YT-Summarizer] Transcript panel not found, attempting to open...');
+        const expandButton = await findExpandButton();
+        if (expandButton) {
+            expandButton.click();
+            // Wait for container
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Simple wait
+            container = document.querySelector('ytd-transcript-segment-list-renderer');
+        } else {
+             // Try the menu "Show transcript" item approach if needed (often hidden in description "more" or overflow menu)
+             // For now, assume description is expanded or button is visible
+             console.warn('[YT-Summarizer] Could not find "Show transcript" button.');
+        }
+    }
+
+    if (!container) {
+         // Final retry: Is it in the description?
+         // This is complex as it requires expanding the description.
+         // Let's just throw for now if we can't simple-click it.
+         throw new Error('Transcript panel not open and could not auto-open.');
     }
 
     const segments = container.querySelectorAll('ytd-transcript-segment-renderer');
-    if (!segments || segments.length === 0) {
-        throw new Error('No segments found in DOM.');
+    if (!segments.length) {
+        throw new Error('No transcript segments found in DOM.');
     }
 
     let result = '';
-    segments.forEach(segment => {
-        const timeEl = segment.querySelector('.segment-start-offset');
-        const textEl = segment.querySelector('.segment-text');
-        
+    segments.forEach(seg => {
+        const timeEl = seg.querySelector('.segment-timestamp');
+        const textEl = seg.querySelector('.segment-text');
         if (timeEl && textEl) {
-            const time = timeEl.innerText.trim();
-            const text = textEl.innerText.trim();
-            result += `(${time}) ${text} `;
+            result += `(${timeEl.innerText.trim()}) ${textEl.innerText.trim()} `;
         }
     });
 
     return result.trim();
+}
+
+async function findExpandButton() {
+    // Strategy 1: The designated button in the description (newer UI)
+    // Often listed as "Show transcript" in the description block actions
+    const buttons = Array.from(document.querySelectorAll('button'));
+    const showTranscriptBtn = buttons.find(b => b.ariaLabel === 'Show transcript' || b.innerText.includes('Show transcript'));
+    if (showTranscriptBtn) return showTranscriptBtn;
+
+    // Strategy 2: Look in the overflow menu (older UI or mobile-ish views?)
+    // This is hard to automate reliably without disrupting user.
+    return null;
 }
 
 function formatTime(seconds) {
