@@ -1,0 +1,40 @@
+/* YouTube Summarizer Button Styles */
+.yt-summarizer-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #f1f1f1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 18px;
+  padding: 0 16px;
+  height: 36px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: "Roboto", "Arial", sans-serif;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: background-color 0.2s;
+  text-decoration: none;
+}
+
+.yt-summarizer-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: transparent;
+}
+
+/* Light mode overrides if needed - YouTube usually manages this with variables, but we'll try to stick to neutral or inspect native buttons later */
+html[dark] .yt-summarizer-btn {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #f1f1f1;
+}
+
+html:not([dark]) .yt-summarizer-btn {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: #0f0f0f;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+html:not([dark]) .yt-summarizer-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
