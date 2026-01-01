@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube Summarizer Settings</title>
+  <link rel="stylesheet" href="popup.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="header">
+    <h1>Settings</h1>
+  </div>
+  
+  <div class="container">
+    <div class="form-group">
+      <label for="language">Target Language</label>
+      <select id="language">
+        <option value="English">English</option>
+        <option value="Vietnamese">Vietnamese</option>
+        <option value="Spanish">Spanish</option>
+        <option value="French">French</option>
+        <option value="German">German</option>
+        <option value="Japanese">Japanese</option>
+        <option value="Korean">Korean</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="summaryStyle">Summary Style</label>
+      <select id="summaryStyle">
+        <option value="executive">Executive (Concise)</option>
+        <option value="detailed">Detailed (Deep Dive)</option>
+        <option value="bullets">Bullet Points Only</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="promptTemplate">Custom Prompt Template</label>
+      <textarea id="promptTemplate" rows="6" placeholder="Variables: {{Title}}, {{URL}}, {{Transcript}}"></textarea>
+      <div class="help-text">Use {{Title}}, {{URL}}, {{Transcript}} as placeholders.</div>
+      <button id="resetPrompt" class="secondary-btn">Reset to Default</button>
+    </div>
+    
+    <div class="actions">
+      <button id="saveBtn" class="primary-btn">Save Settings</button>
+    </div>
+    
+    <div id="status" class="status-msg"></div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,7 +1,8 @@
 // youtube_content.js
 
 // --- Configuration ---
-const CHATGPT_PROMPT_TEMPLATE = `
+// Default if storage is empty
+const DEFAULT_PROMPT_TEMPLATE = `
 You are an expert content strategist and translator. Your goal is to synthesize the provided YouTube transcript into a high-value, professional summary that is both insightful and easy to digest.
 
 ### Executive Summary
@@ -10,24 +11,17 @@ Provide a compelling 2-3 sentence overview of the video's core thesis. What is t
 ### Key Insights & Takeaways
 Extract 5-10 distinct, actionable points. Focus on unique perspectives, specific data, or step-by-step instructions rather than generic fluff.
 
+### Summarize for 6 year old audience 
+
 **Format for each point:**
 (Start-End) **[Topic/Heading]**: [Deep-dive summary of the point in English]
-> *[Vietnamese translation: Natural, professional, and context-aware]*
+> *[Target Language Translation: Natural, professional, and context-aware]*
 [Link to video at start time]
 
-**Example:**
-(0:04-0:40) **The Value of Simplicity**: Bubble sort is often dismissed for poor performance, yet its simplicity makes it the perfect teaching tool.
-> *Giá trị của sự đơn giản: Bubble sort thường bị bỏ qua vì hiệu suất kém, nhưng sự đơn giản lại khiến nó trở thành công cụ giảng dạy tuyệt vời.*
-https://youtu.be/qGH8gKdpZMQ?t=4
-
-### Notable Quotes / "Aha!" Moments
+### Notable Quotes
 Briefly list 1-2 standout quotes or surprising facts from the video.
 
 ---
-**Technical Instructions:**
-- **Links**: Use {{URL}} as base. Convert timestamp (e.g., 1:05) to seconds (e.g. 65) -> {{URL}}?t=65
-- **Tone**: Professional, objective, yet engaging.
-
 **Video Metadata:**
 - **Title**: "{{Title}}"
 - **URL**: "{{URL}}"
@@ -42,35 +36,58 @@ function createSummarizerUI() {
     const container = document.createElement('div');
     container.className = 'yt-summarizer-container';
 
-    // 1. Create Checkbox for "Temporary Chat"
-    const label = document.createElement('label');
-    label.className = 'yt-summarizer-label';
-    label.title = "Use temporary chat (history won't be saved)";
+    // 1. Create main wrapper for better isolation
+    const wrapper = document.createElement('div');
+    wrapper.className = 'yt-summarizer-wrapper';
 
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.className = 'yt-summarizer-checkbox';
-    
-    // Load saved state
-    const savedState = localStorage.getItem('yt_summarizer_temp_chat');
-    checkbox.checked = savedState === 'true';
+    // 2. Button Group
+    const btnGroup = document.createElement('div');
+    btnGroup.className = 'yt-summarizer-group';
 
-    // Save state on change
-    checkbox.onchange = (e) => {
-        localStorage.setItem('yt_summarizer_temp_chat', e.target.checked);
-    };
-
-    label.appendChild(checkbox);
-    label.appendChild(document.createTextNode('Temp Chat'));
-
-    // 2. Create Summarize Button
+    // Summarize Button
     const btn = document.createElement('button');
     btn.className = 'yt-summarizer-btn';
-    btn.innerText = 'Summarize';
+    btn.innerHTML = `
+        <svg viewBox="0 0 24 24" height="20" width="20" fill="currentColor" style="margin-right: 6px;">
+            <path d="M14 17H4v2h10v-2zm6-8H4v2h16V9zM4 15h16v-2H4v2zM4 5v2h16V5H4z"></path>
+        </svg>
+        Summarize
+    `;
+    btn.title = "Summarize with ChatGPT";
     btn.onclick = handleSummarizeClick;
 
+    // Settings Hint (small icon)
+    const settingsBtn = document.createElement('button');
+    settingsBtn.className = 'yt-summarizer-icon-btn';
+    settingsBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" height="18" width="18" fill="currentColor">
+            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.09.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"></path>
+        </svg>
+    `;
+    settingsBtn.title = "Configure in Extension Settings";
+    settingsBtn.onclick = () => {
+        alert("Please click the extension icon in your browser toolbar to configure settings.");
+    };
+
+    btnGroup.appendChild(btn);
+    btnGroup.appendChild(settingsBtn);
+    container.appendChild(btnGroup);
+
+    // Temp chat toggle (smaller)
+    const label = document.createElement('label');
+    label.className = 'yt-summarizer-toggle';
+    label.title = "Use temporary chat";
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    const savedState = localStorage.getItem('yt_summarizer_temp_chat');
+    checkbox.checked = savedState === 'true';
+    checkbox.onchange = (e) => localStorage.setItem('yt_summarizer_temp_chat', e.target.checked);
+
+    label.appendChild(checkbox);
+    label.appendChild(document.createTextNode('Temp'));
+
     container.appendChild(label);
-    container.appendChild(btn);
 
     return container;
 }
@@ -107,13 +124,24 @@ async function handleSummarizeClick() {
         const videoTitle = document.title.replace(' - YouTube', '');
         const videoUrl = window.location.href;
 
-        const prompt = CHATGPT_PROMPT_TEMPLATE
+        // Fetch settings
+        const settings = await chrome.storage.sync.get(['promptTemplate', 'language']);
+        let template = settings.promptTemplate || DEFAULT_PROMPT_TEMPLATE;
+        let language = settings.language || 'Vietnamese'; // Default to Vietnamese as per original request history or English
+
+        // 1. naive replacement of the generic placeholder if it exists
+        // 2. forceful replacement of {{Language}} if we add it
+        // 3. standard metadata replacements
+        
+        const prompt = template
+            .replace('Target Language Translation', `${language} Translation`) // Fix for the specific line in default template
+            .replace('{{Language}}', language) // Future proofing
             .replace('{{Title}}', videoTitle)
             .replace('{{URL}}', videoUrl)
             .replace('{{Transcript}}', transcript);
 
         // Check if temporary chat is requested
-        const useTempChat = document.querySelector('.yt-summarizer-checkbox')?.checked || false;
+        const useTempChat = document.querySelector('.yt-summarizer-toggle input')?.checked || false;
 
         // Send to background
         chrome.runtime.sendMessage({

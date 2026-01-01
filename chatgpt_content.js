@@ -24,7 +24,7 @@ async function checkAndPastePrompt() {
         if (inputElement.tagName === 'TEXTAREA') {
             inputElement.value = prompt;
         } else {
-            inputElement.textContent = prompt;
+            inputElement.innerText = prompt;
         }
         
         // Dispatch events to satisfy frameworks (React usually needs input/change events)

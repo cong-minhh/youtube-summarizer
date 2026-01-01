@@ -1,75 +1,99 @@
-/* YouTube Summarizer Button Styles */
+/* YouTube Summarizer Professional Styles */
+
+.yt-summarizer-container {
+    display: flex;
+    align-items: center;
+    margin-left: 8px;
+    font-family: "Roboto", "Arial", sans-serif;
+}
+
+.yt-summarizer-group {
+    display: flex;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.05); /* Light mode default */
+    border-radius: 18px;
+    overflow: hidden;
+    margin-right: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
 .yt-summarizer-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #f1f1f1;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 18px;
-  padding: 0 16px;
-  height: 36px;
-  font-size: 14px;
-  font-weight: 500;
-  font-family: "Roboto", "Arial", sans-serif;
-  cursor: pointer;
-  margin-left: 8px;
-  transition: background-color 0.2s;
-  text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    border: none;
+    color: #0f0f0f;
+    padding: 0 16px;
+    height: 36px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
 .yt-summarizer-btn:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-color: transparent;
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
-/* Light mode overrides if needed - YouTube usually manages this with variables, but we'll try to stick to neutral or inspect native buttons later */
-html[dark] .yt-summarizer-btn {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #f1f1f1;
-}
-
-html:not([dark]) .yt-summarizer-btn {
-    background-color: rgba(0, 0, 0, 0.05);
+.yt-summarizer-icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: transparent;
+    border: none;
+    border-left: 1px solid rgba(0, 0, 0, 0.1);
     color: #0f0f0f;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-
-/* Container for the button and checkbox */
-.yt-summarizer-container {
-    display: inline-flex;
-    align-items: center;
-    margin-left: 8px;
-}
-
-/* Label for the checkbox */
-.yt-summarizer-label {
-    display: inline-flex;
-    align-items: center;
-    color: var(--yt-spec-text-secondary, #aaa);
-    font-size: 12px;
-    margin-right: 8px;
+    width: 36px;
+    height: 36px;
     cursor: pointer;
-    font-family: "Roboto", "Arial", sans-serif;
+    transition: background-color 0.2s;
+}
+
+.yt-summarizer-icon-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Toggle Switch Style for Temp Chat */
+.yt-summarizer-toggle {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: #606060;
+    cursor: pointer;
     user-select: none;
 }
 
-.yt-summarizer-label:hover {
-    color: var(--yt-spec-text-primary, #fff);
-}
-
-/* Checkbox style */
-.yt-summarizer-checkbox {
+.yt-summarizer-toggle input {
     margin-right: 4px;
-    cursor: pointer;
 }
 
-/* Light mode overrides for label */
-html:not([dark]) .yt-summarizer-label {
-    color: var(--yt-spec-text-secondary, #606060);
+/* Dark Mode Overrides */
+html[dark] .yt-summarizer-group {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
-html:not([dark]) .yt-summarizer-label:hover {
-    color: var(--yt-spec-text-primary, #0f0f0f);
+html[dark] .yt-summarizer-btn,
+html[dark] .yt-summarizer-icon-btn {
+    color: #f1f1f1;
+}
+
+html[dark] .yt-summarizer-btn:hover,
+html[dark] .yt-summarizer-icon-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+html[dark] .yt-summarizer-icon-btn {
+    border-left-color: rgba(255, 255, 255, 0.2);
+}
+
+html[dark] .yt-summarizer-toggle {
+    color: #aaa;
+}
+
+/* Active/Loading State */
+.yt-summarizer-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
 }
