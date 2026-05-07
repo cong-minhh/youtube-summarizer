@@ -218,43 +218,59 @@ async function fetchTranscript() {
 }
 
 async function scrapeTranscriptFromDom() {
-    // 1. Check if already open
-    let container = document.querySelector('ytd-transcript-segment-list-renderer');
+    // 1. Check if transcript segments are already in the DOM
+    let segments = document.querySelectorAll('ytd-transcript-segment-renderer, transcript-segment-view-model');
     
     // 2. If not open, try to open it
-    if (!container) {
+    if (!segments.length) {
         console.log('[YT-Summarizer] Transcript panel not found, attempting to open...');
         const expandButton = await findExpandButton();
         if (expandButton) {
             expandButton.click();
-            // Wait for container
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simple wait
-            container = document.querySelector('ytd-transcript-segment-list-renderer');
+            // Wait for segments to render (poll for up to 2.5 seconds)
+            for (let i = 0; i < 25; i++) {
+                await new Promise(resolve => setTimeout(resolve, 100)); // 100ms wait
+                segments = document.querySelectorAll('ytd-transcript-segment-renderer, transcript-segment-view-model');
+                if (segments.length > 0) break;
+            }
         } else {
-             // Try the menu "Show transcript" item approach if needed (often hidden in description "more" or overflow menu)
-             // For now, assume description is expanded or button is visible
+             // Try the menu "Show transcript" item approach if needed
              console.warn('[YT-Summarizer] Could not find "Show transcript" button.');
         }
     }
 
-    if (!container) {
-         // Final retry: Is it in the description?
-         // This is complex as it requires expanding the description.
-         // Let's just throw for now if we can't simple-click it.
-         throw new Error('Transcript panel not open and could not auto-open.');
-    }
-
-    const segments = container.querySelectorAll('ytd-transcript-segment-renderer');
     if (!segments.length) {
-        throw new Error('No transcript segments found in DOM.');
+         // This means we still couldn't find any segments, either we failed to open or YouTube changed the DOM heavily
+         throw new Error('Transcript panel not open and could not auto-open.');
     }
 
     let result = '';
     segments.forEach(seg => {
-        const timeEl = seg.querySelector('.segment-timestamp');
-        const textEl = seg.querySelector('.segment-text');
+        const timeEl = seg.querySelector('.segment-timestamp') || seg.querySelector('[class*="timestamp"]');
+        const textEl = seg.querySelector('.segment-text') || seg.querySelector('yt-formatted-string');
+        
+        let time = '';
+        let text = '';
+
         if (timeEl && textEl) {
-            result += `(${timeEl.innerText.trim()}) ${textEl.innerText.trim()} `;
+            time = timeEl.innerText || timeEl.textContent;
+            text = textEl.innerText || textEl.textContent;
+        } else if (seg.tagName.toLowerCase() === 'transcript-segment-view-model') {
+            // Handling for the new UI format
+            const timeDiv = seg.querySelector('div');
+            const textSpan = seg.querySelector('span');
+            time = timeDiv ? (timeDiv.innerText || timeDiv.textContent) : '';
+            text = textSpan ? (textSpan.innerText || textSpan.textContent) : '';
+        } else {
+            // Fallback: use raw text of segment and collapse newlines
+            text = seg.innerText || seg.textContent || '';
+        }
+
+        time = time ? time.trim() : '';
+        text = text ? text.trim().replace(/\n+/g, ' ') : '';
+        
+        if (text) {
+            result += time ? `(${time}) ${text} ` : `${text} `;
         }
     });
 
